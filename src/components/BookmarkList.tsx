@@ -68,12 +68,19 @@ export default function BookmarkList({ initialBookmarks, userId }: BookmarkListP
                             return [newBookmark, ...prev];
                         });
                     } else if (payload.eventType === "UPDATE") {
-                        const updated = payload.new as Partial<Bookmark>;
+                        const updated = payload.new as Bookmark;
                         if (!updated.id) return;
 
-                        setBookmarks((prev) =>
-                            prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
-                        );
+                        setBookmarks((prev) => {
+                            const exists = prev.find((b) => b.id === updated.id);
+                            if (exists) {
+                                return prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b));
+                            } else {
+                                // If bookmark doesn't exist (e.g. initial INSERT was missed), treat UPDATE as INSERT
+                                // This works because we enabled REPLICA IDENTITY FULL
+                                return [updated, ...prev];
+                            }
+                        });
                     } else if (payload.eventType === "DELETE") {
                         const deletedId = payload.old.id;
                         setBookmarks((prev) => prev.filter((b) => b.id !== deletedId));
