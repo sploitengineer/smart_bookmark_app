@@ -50,18 +50,17 @@ export default function BookmarkList({ initialBookmarks, userId }: BookmarkListP
     }, []);
 
     useEffect(() => {
-        console.log("🔌 Setting up Supabase Realtime subscription...");
         const channel = supabase
             .channel("bookmarks-realtime")
             .on(
                 "postgres_changes",
-                { event: "*", schema: "public", table: "bookmarks" },
-                (payload) => {
-                    console.log(`🔥 Realtime Event Received (${payload.eventType}):`, payload);
+                { event: "*", schema: "public" },
+                (payload: any) => {
+                    // Filter for bookmarks table (case-insensitive check to be safe)
+                    if (payload.table !== "bookmarks" && payload.table !== "Bookmarks") return;
 
                     if (payload.eventType === "INSERT") {
                         const newBookmark = payload.new as Bookmark;
-                        // Robust ID check
                         if (!newBookmark.id) return;
 
                         setBookmarks((prev) => {
@@ -82,12 +81,9 @@ export default function BookmarkList({ initialBookmarks, userId }: BookmarkListP
                     }
                 }
             )
-            .subscribe((status) => {
-                console.log(`📡 Realtime status: ${status}`);
-            });
+            .subscribe();
 
         return () => {
-            console.log("🔌 Cleaning up Realtime subscription...");
             supabase.removeChannel(channel);
         };
     }, [supabase, userId]);
