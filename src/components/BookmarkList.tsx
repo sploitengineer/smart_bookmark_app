@@ -55,39 +55,31 @@ export default function BookmarkList({ initialBookmarks, userId }: BookmarkListP
             .channel("bookmarks-realtime")
             .on(
                 "postgres_changes",
-                { event: "INSERT", schema: "public", table: "bookmarks" },
+                { event: "*", schema: "public", table: "bookmarks" },
                 (payload) => {
-                    console.log("✨ Realtime INSERT:", payload);
-                    const newBookmark = payload.new as Bookmark;
-                    if (!newBookmark.id) return;
+                    console.log(`🔥 Realtime Event Received (${payload.eventType}):`, payload);
 
-                    setBookmarks((prev) => {
-                        if (prev.find((b) => b.id === newBookmark.id)) return prev;
-                        return [newBookmark, ...prev];
-                    });
-                }
-            )
-            .on(
-                "postgres_changes",
-                { event: "UPDATE", schema: "public", table: "bookmarks" },
-                (payload) => {
-                    console.log("🔄 Realtime UPDATE:", payload);
-                    const updated = payload.new as Partial<Bookmark>;
-                    if (!updated.id) return;
+                    if (payload.eventType === "INSERT") {
+                        const newBookmark = payload.new as Bookmark;
+                        // Robust ID check
+                        if (!newBookmark.id) return;
 
-                    setBookmarks((prev) =>
-                        prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
-                    );
-                }
-            )
-            .on(
-                "postgres_changes",
-                { event: "DELETE", schema: "public", table: "bookmarks" },
-                (payload) => {
-                    console.log("🗑️ Realtime DELETE:", payload);
-                    const deletedId = payload.old.id;
-                    setBookmarks((prev) => prev.filter((b) => b.id !== deletedId));
-                    setSearchResults((prev) => prev ? prev.filter((b) => b.id !== deletedId) : null);
+                        setBookmarks((prev) => {
+                            if (prev.find((b) => b.id === newBookmark.id)) return prev;
+                            return [newBookmark, ...prev];
+                        });
+                    } else if (payload.eventType === "UPDATE") {
+                        const updated = payload.new as Partial<Bookmark>;
+                        if (!updated.id) return;
+
+                        setBookmarks((prev) =>
+                            prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
+                        );
+                    } else if (payload.eventType === "DELETE") {
+                        const deletedId = payload.old.id;
+                        setBookmarks((prev) => prev.filter((b) => b.id !== deletedId));
+                        setSearchResults((prev) => prev ? prev.filter((b) => b.id !== deletedId) : null);
+                    }
                 }
             )
             .subscribe((status) => {
