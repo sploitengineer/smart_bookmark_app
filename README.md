@@ -4,7 +4,7 @@ A real-time, AI-powered bookmark manager built with **Next.js 15 (App Router)**,
 
 ## Live Demo
 
-🔗 [Deployed on Vercel](#https://smart-bookmark-app-kappa-one.vercel.app/)
+🔗 [Deployed on Vercel] (https://smart-bookmark-app-kappa-one.vercel.app/)
 
 ---
 
