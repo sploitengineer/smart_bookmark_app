@@ -54,7 +54,7 @@ export default function BookmarkList({ initialBookmarks, userId }: BookmarkListP
             .channel("bookmarks-realtime")
             .on(
                 "postgres_changes",
-                { event: "INSERT", schema: "public", table: "bookmarks", filter: `user_id=eq.${userId}` },
+                { event: "INSERT", schema: "public", table: "bookmarks" },
                 (payload) => {
                     const newBookmark = payload.new as Bookmark;
                     setBookmarks((prev) => {
@@ -65,7 +65,7 @@ export default function BookmarkList({ initialBookmarks, userId }: BookmarkListP
             )
             .on(
                 "postgres_changes",
-                { event: "UPDATE", schema: "public", table: "bookmarks", filter: `user_id=eq.${userId}` },
+                { event: "UPDATE", schema: "public", table: "bookmarks" },
                 (payload) => {
                     const updated = payload.new as Bookmark;
                     setBookmarks((prev) =>
