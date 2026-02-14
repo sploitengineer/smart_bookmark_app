@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 import BookmarkCard from "./BookmarkCard";
 import AddBookmarkForm from "./AddBookmarkForm";
@@ -27,7 +27,7 @@ interface BookmarkListProps {
 export default function BookmarkList({ initialBookmarks, userId }: BookmarkListProps) {
     const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks);
     const [searchResults, setSearchResults] = useState<Bookmark[] | null>(null);
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
 
     const displayBookmarks = searchResults !== null ? searchResults : bookmarks;
 
@@ -50,13 +50,17 @@ export default function BookmarkList({ initialBookmarks, userId }: BookmarkListP
     }, []);
 
     useEffect(() => {
+        console.log("🔌 Setting up Supabase Realtime subscription...");
         const channel = supabase
             .channel("bookmarks-realtime")
             .on(
                 "postgres_changes",
                 { event: "INSERT", schema: "public", table: "bookmarks" },
                 (payload) => {
+                    console.log("✨ Realtime INSERT:", payload);
                     const newBookmark = payload.new as Bookmark;
+                    if (!newBookmark.id) return;
+
                     setBookmarks((prev) => {
                         if (prev.find((b) => b.id === newBookmark.id)) return prev;
                         return [newBookmark, ...prev];
@@ -67,7 +71,10 @@ export default function BookmarkList({ initialBookmarks, userId }: BookmarkListP
                 "postgres_changes",
                 { event: "UPDATE", schema: "public", table: "bookmarks" },
                 (payload) => {
+                    console.log("🔄 Realtime UPDATE:", payload);
                     const updated = payload.new as Partial<Bookmark>;
+                    if (!updated.id) return;
+
                     setBookmarks((prev) =>
                         prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
                     );
@@ -77,14 +84,20 @@ export default function BookmarkList({ initialBookmarks, userId }: BookmarkListP
                 "postgres_changes",
                 { event: "DELETE", schema: "public", table: "bookmarks" },
                 (payload) => {
+                    console.log("🗑️ Realtime DELETE:", payload);
                     const deletedId = payload.old.id;
                     setBookmarks((prev) => prev.filter((b) => b.id !== deletedId));
                     setSearchResults((prev) => prev ? prev.filter((b) => b.id !== deletedId) : null);
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log(`📡 Realtime status: ${status}`);
+            });
 
-        return () => { supabase.removeChannel(channel); };
+        return () => {
+            console.log("🔌 Cleaning up Realtime subscription...");
+            supabase.removeChannel(channel);
+        };
     }, [supabase, userId]);
 
     return (
