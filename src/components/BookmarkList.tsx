@@ -67,9 +67,9 @@ export default function BookmarkList({ initialBookmarks, userId }: BookmarkListP
                 "postgres_changes",
                 { event: "UPDATE", schema: "public", table: "bookmarks" },
                 (payload) => {
-                    const updated = payload.new as Bookmark;
+                    const updated = payload.new as Partial<Bookmark>;
                     setBookmarks((prev) =>
-                        prev.map((b) => (b.id === updated.id ? updated : b))
+                        prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
                     );
                 }
             )
